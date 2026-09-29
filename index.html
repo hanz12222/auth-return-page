@@ -1,1 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'; img-src 'none'">
+  <title>Etsy 授权返回</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f5f5; color: #202124; }
+    main { width: min(560px, calc(100% - 40px)); padding: 32px; border-radius: 16px; background: white; box-shadow: 0 8px 32px rgba(0,0,0,.12); }
+    h1 { margin-top: 0; font-size: 22px; }
+    p { line-height: 1.6; }
+    @media (prefers-color-scheme: dark) { body { background: #111827; color: #f3f4f6; } main { background: #1f2937; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Etsy 授权返回</h1>
+    <p id="status">正在校验一次性授权结果…</p>
+    <noscript>此回调页需要 JavaScript 才能返回本机授权程序。</noscript>
+  </main>
+  <script>
+    (() => {
+      'use strict';
+      const status = document.getElementById('status');
+      const incoming = new URLSearchParams(window.location.search);
+      const outgoing = new URLSearchParams();
+      const limits = { code: 4096, state: 256, error: 256, error_description: 1024 };
 
+      for (const [name, limit] of Object.entries(limits)) {
+        const value = incoming.get(name);
+        if (value !== null) {
+          if (!value || value.length > limit) {
+            history.replaceState(null, '', window.location.pathname);
+            status.textContent = '授权返回参数无效，请关闭此页并重新连接。';
+            return;
+          }
+          outgoing.set(name, value);
+        }
+      }
+
+      history.replaceState(null, '', window.location.pathname);
+      const hasState = outgoing.has('state');
+      const hasResult = outgoing.has('code') || outgoing.has('error');
+      if (!hasState || !hasResult) {
+        status.textContent = '没有检测到有效的 Etsy 授权结果，请从本机系统重新连接。';
+        return;
+      }
+
+      status.textContent = '正在安全返回本机授权程序…';
+      window.location.replace(
+        'http://127.0.0.1:8767/api/etsy/oauth/callback?' + outgoing.toString()
+      );
+    })();
+  </script>
+</body>
+</html>
